@@ -16,6 +16,7 @@ var config = {
   },
 };
 
+var player;
 var platforms;
 
 var game = new Phaser.Game(config);
@@ -41,6 +42,29 @@ function create() {
   platforms.create(150, 150, "ground");
   platforms.create(1250, 180, "ground");
   platforms.create(615, 310, "ground");
+
+  player = this.physics.add.sprite(100, 450, "dude");
+
+  player.setBounce(0.2);
+  player.setCollideWorldBounds(true);
+
+  this.anims.create({
+    key: "left",
+    frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }),
+    frameRate: 10,
+    repeat: -1,
+  });
+  this.anims.create({
+    key: "turn",
+    frames: [{ key: "dude", frame: 4 }],
+    frameRate: 20,
+  });
+  this.anims.create({
+    key: "right",
+    frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
+    frameRate: 10,
+    repeat: -1,
+  });
 }
 
 function update() {}
