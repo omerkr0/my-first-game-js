@@ -22,8 +22,8 @@ var bombs;
 var platforms;
 var cursors;
 var score = 0;
-var gameOver = false;
 var scoreText;
+var gameOver = false;
 
 var game = new Phaser.Game(config);
 
@@ -36,6 +36,8 @@ function preload() {
     frameWidth: 32,
     frameHeight: 48,
   });
+  this.load.audio("jumpSound", "assets/sounds/jumping.mp3");
+  this.load.audio("starSound", "assets/sounds/star.mp3");
 }
 
 function create() {
@@ -53,6 +55,9 @@ function create() {
 
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
+
+  jumpSound = this.sound.add("jumpSound");
+  starSound = this.sound.add("starSound");
 
   this.anims.create({
     key: "left",
@@ -100,22 +105,24 @@ function create() {
 }
 
 function update() {
+  if (gameOver) {
+    return;
+  }
   if (cursors.left.isDown) {
     player.setVelocityX(-160);
-
     player.anims.play("left", true);
   } else if (cursors.right.isDown) {
     player.setVelocityX(160);
-
     player.anims.play("right", true);
   } else {
     player.setVelocityX(0);
-
     player.anims.play("turn");
   }
 
   if (cursors.up.isDown && player.body.touching.down) {
     player.setVelocityY(-330);
+
+    jumpSound.play();
   }
 }
 
@@ -124,6 +131,7 @@ function collectStar(player, star) {
 
   score += 10;
   scoreText.setText(`Score: ${score}`);
+  starSound.play();
 
   if (stars.countActive(true) === 0) {
     stars.children.iterate(function (child) {
