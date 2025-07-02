@@ -24,6 +24,8 @@ var cursors;
 var score = 0;
 var scoreText;
 var gameOver = false;
+var jumpSound;
+var starSound;
 
 var game = new Phaser.Game(config);
 
@@ -122,16 +124,25 @@ function update() {
   if (cursors.up.isDown && player.body.touching.down) {
     player.setVelocityY(-330);
 
-    jumpSound.play();
+    if (jumpSound && !jumpSound.isPlaying) {
+      jumpSound.play();
+    }
   }
 }
 
 function collectStar(player, star) {
   star.disableBody(true, true);
 
-  score += 10;
-  scoreText.setText(`Score: ${score}`);
-  starSound.play();
+  // Prevent score overflow and ensure it's a valid number
+  if (score < Number.MAX_SAFE_INTEGER - 10) {
+    score += 10;
+  }
+  // Sanitize score display to prevent potential XSS and ensure it's an integer
+  scoreText.setText('Score: ' + Math.floor(score));
+  
+  if (starSound && !starSound.isPlaying) {
+    starSound.play();
+  }
 
   if (stars.countActive(true) === 0) {
     stars.children.iterate(function (child) {
@@ -146,7 +157,12 @@ function collectStar(player, star) {
     var bomb = bombs.create(x, 16, "bomb");
     bomb.setBounce(1);
     bomb.setCollideWorldBounds(true);
-    bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+    var velocityX = Phaser.Math.Between(-200, 200);
+    // Ensure minimum velocity to avoid slow/stationary bombs
+    if (Math.abs(velocityX) < 50) {
+      velocityX = velocityX < 0 ? -50 : 50;
+    }
+    bomb.setVelocity(velocityX, Phaser.Math.Between(50, 100));
   }
 }
 
