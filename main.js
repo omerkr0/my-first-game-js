@@ -43,30 +43,62 @@ var mobileControls = {
   up: false
 };
 
+var lastJumpTime = 0;
+
 var game = new Phaser.Game(config);
 
-// Mobile control event listeners
+// Mobile control event listeners with improved responsiveness
 function setupMobileControls() {
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const jumpBtn = document.getElementById('jump-btn');
   
+  // Helper function for haptic feedback
+  function vibrate() {
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+  }
+  
+  // Helper function to add visual feedback
+  function addPressedClass(btn) {
+    btn.classList.add('pressed');
+  }
+  
+  function removePressedClass(btn) {
+    btn.classList.remove('pressed');
+  }
+  
   if (leftBtn) {
     leftBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       mobileControls.left = true;
+      addPressedClass(leftBtn);
+      vibrate();
     });
     leftBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       mobileControls.left = false;
+      removePressedClass(leftBtn);
+    });
+    leftBtn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      mobileControls.left = false;
+      removePressedClass(leftBtn);
     });
     leftBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       mobileControls.left = true;
+      addPressedClass(leftBtn);
     });
     leftBtn.addEventListener('mouseup', (e) => {
       e.preventDefault();
       mobileControls.left = false;
+      removePressedClass(leftBtn);
+    });
+    leftBtn.addEventListener('mouseleave', (e) => {
+      mobileControls.left = false;
+      removePressedClass(leftBtn);
     });
   }
   
@@ -74,18 +106,32 @@ function setupMobileControls() {
     rightBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       mobileControls.right = true;
+      addPressedClass(rightBtn);
+      vibrate();
     });
     rightBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       mobileControls.right = false;
+      removePressedClass(rightBtn);
+    });
+    rightBtn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      mobileControls.right = false;
+      removePressedClass(rightBtn);
     });
     rightBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       mobileControls.right = true;
+      addPressedClass(rightBtn);
     });
     rightBtn.addEventListener('mouseup', (e) => {
       e.preventDefault();
       mobileControls.right = false;
+      removePressedClass(rightBtn);
+    });
+    rightBtn.addEventListener('mouseleave', (e) => {
+      mobileControls.right = false;
+      removePressedClass(rightBtn);
     });
   }
   
@@ -93,18 +139,32 @@ function setupMobileControls() {
     jumpBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       mobileControls.up = true;
+      addPressedClass(jumpBtn);
+      vibrate();
     });
     jumpBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       mobileControls.up = false;
+      removePressedClass(jumpBtn);
+    });
+    jumpBtn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      mobileControls.up = false;
+      removePressedClass(jumpBtn);
     });
     jumpBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       mobileControls.up = true;
+      addPressedClass(jumpBtn);
     });
     jumpBtn.addEventListener('mouseup', (e) => {
       e.preventDefault();
       mobileControls.up = false;
+      removePressedClass(jumpBtn);
+    });
+    jumpBtn.addEventListener('mouseleave', (e) => {
+      mobileControls.up = false;
+      removePressedClass(jumpBtn);
     });
   }
 }
@@ -132,15 +192,41 @@ function create() {
 
   platforms = this.physics.add.staticGroup();
 
-  // Responsive platform positioning
+  // Responsive platform positioning with mobile optimization
   const groundScale = Math.max(gameWidth / 160, 3); // Ensure ground covers width
   platforms.create(gameWidth/2, gameHeight - 20, "ground").setScale(groundScale, 2).refreshBody();
   
-  // Adjust platform positions based on screen size
-  platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
-  platforms.create(gameWidth * 0.15, gameHeight * 0.4, "ground");
-  platforms.create(gameWidth * 0.9, gameHeight * 0.35, "ground");
-  platforms.create(gameWidth * 0.45, gameHeight * 0.55, "ground");
+  // Mobile-friendly platform positioning and sizing
+  const isMobile = gameWidth < 600;
+  const platformScale = isMobile ? 1.5 : 1; // Larger platforms on mobile
+  
+  if (isMobile) {
+    // Mobile layout: fewer, larger, easier-to-reach platforms
+    const leftPlatform = platforms.create(gameWidth * 0.2, gameHeight * 0.75, "ground");
+    leftPlatform.setScale(platformScale * 1.2).refreshBody();
+    
+    const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.5, "ground");
+    centerPlatform.setScale(platformScale * 1.3).refreshBody();
+    
+    const rightPlatform = platforms.create(gameWidth * 0.8, gameHeight * 0.65, "ground");
+    rightPlatform.setScale(platformScale * 1.2).refreshBody();
+    
+    const topPlatform = platforms.create(gameWidth * 0.35, gameHeight * 0.25, "ground");
+    topPlatform.setScale(platformScale).refreshBody();
+  } else {
+    // Desktop layout: original positioning with slight improvements
+    const p1 = platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
+    p1.setScale(platformScale).refreshBody();
+    
+    const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.4, "ground");
+    p2.setScale(platformScale).refreshBody();
+    
+    const p3 = platforms.create(gameWidth * 0.9, gameHeight * 0.35, "ground");
+    p3.setScale(platformScale).refreshBody();
+    
+    const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.55, "ground");
+    p4.setScale(platformScale).refreshBody();
+  }
 
   player = this.physics.add.sprite(100, gameHeight - 150, "dude");
 
@@ -205,20 +291,28 @@ function update() {
   const rightPressed = (cursors.right.isDown || mobileControls.right);
   const upPressed = (cursors.up.isDown || mobileControls.up);
   
+  // Mobile-optimized movement speeds
+  const isMobile = gameWidth < 600;
+  const moveSpeed = isMobile ? 140 : 160; // Slightly slower on mobile for better control
+  const jumpForce = isMobile ? -350 : -330; // Slightly higher jump on mobile
+  
   if (leftPressed) {
-    player.setVelocityX(-160);
+    player.setVelocityX(-moveSpeed);
     player.anims.play("left", true);
   } else if (rightPressed) {
-    player.setVelocityX(160);
+    player.setVelocityX(moveSpeed);
     player.anims.play("right", true);
   } else {
     player.setVelocityX(0);
     player.anims.play("turn");
   }
 
-  if (upPressed && player.body.touching.down) {
-    player.setVelocityY(-330);
+  // Jump with cooldown to prevent accidental double jumps on mobile
+  const currentTime = Date.now();
+  if (upPressed && player.body.touching.down && (currentTime - lastJumpTime > 200)) {
+    player.setVelocityY(jumpForce);
     jumpSound.play();
+    lastJumpTime = currentTime;
   }
 }
 
