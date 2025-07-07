@@ -1,7 +1,18 @@
+// Get screen dimensions for responsive design
+const gameWidth = Math.min(window.innerWidth, 800);
+const gameHeight = Math.min(window.innerHeight, 600);
+
 var config = {
   type: Phaser.AUTO,
-  width: 1358,
-  height: 575,
+  width: gameWidth,
+  height: gameHeight,
+  parent: 'game-container',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: gameWidth,
+    height: gameHeight
+  },
   physics: {
     default: "arcade",
     arcade: {
@@ -25,7 +36,81 @@ var score = 0;
 var scoreText;
 var gameOver = false;
 
+// Mobile controls
+var mobileControls = {
+  left: false,
+  right: false,
+  up: false
+};
+
 var game = new Phaser.Game(config);
+
+// Mobile control event listeners
+function setupMobileControls() {
+  const leftBtn = document.getElementById('left-btn');
+  const rightBtn = document.getElementById('right-btn');
+  const jumpBtn = document.getElementById('jump-btn');
+  
+  if (leftBtn) {
+    leftBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      mobileControls.left = true;
+    });
+    leftBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      mobileControls.left = false;
+    });
+    leftBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      mobileControls.left = true;
+    });
+    leftBtn.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      mobileControls.left = false;
+    });
+  }
+  
+  if (rightBtn) {
+    rightBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      mobileControls.right = true;
+    });
+    rightBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      mobileControls.right = false;
+    });
+    rightBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      mobileControls.right = true;
+    });
+    rightBtn.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      mobileControls.right = false;
+    });
+  }
+  
+  if (jumpBtn) {
+    jumpBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      mobileControls.up = true;
+    });
+    jumpBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      mobileControls.up = false;
+    });
+    jumpBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      mobileControls.up = true;
+    });
+    jumpBtn.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      mobileControls.up = false;
+    });
+  }
+}
+
+// Setup mobile controls when DOM is ready
+document.addEventListener('DOMContentLoaded', setupMobileControls);
 
 function preload() {
   this.load.image("sky", "assets/images/sky.png");
@@ -41,17 +126,23 @@ function preload() {
 }
 
 function create() {
-  this.add.image(670, 300, "sky");
+  // Scale background to fit screen
+  const bg = this.add.image(gameWidth/2, gameHeight/2, "sky");
+  bg.setDisplaySize(gameWidth, gameHeight);
 
   platforms = this.physics.add.staticGroup();
 
-  platforms.create(400, 568, "ground").setScale(5, 3).refreshBody();
-  platforms.create(1160, 400, "ground");
-  platforms.create(150, 150, "ground");
-  platforms.create(1250, 180, "ground");
-  platforms.create(615, 310, "ground");
+  // Responsive platform positioning
+  const groundScale = Math.max(gameWidth / 160, 3); // Ensure ground covers width
+  platforms.create(gameWidth/2, gameHeight - 20, "ground").setScale(groundScale, 2).refreshBody();
+  
+  // Adjust platform positions based on screen size
+  platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
+  platforms.create(gameWidth * 0.15, gameHeight * 0.4, "ground");
+  platforms.create(gameWidth * 0.9, gameHeight * 0.35, "ground");
+  platforms.create(gameWidth * 0.45, gameHeight * 0.55, "ground");
 
-  player = this.physics.add.sprite(100, 450, "dude");
+  player = this.physics.add.sprite(100, gameHeight - 150, "dude");
 
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
@@ -81,8 +172,8 @@ function create() {
 
   stars = this.physics.add.group({
     key: "star",
-    repeat: 14,
-    setXY: { x: 15, y: 0, stepX: 90 },
+    repeat: Math.floor(gameWidth / 60) - 1, // Responsive star count
+    setXY: { x: 30, y: 0, stepX: Math.floor(gameWidth / Math.floor(gameWidth / 60)) },
   });
 
   stars.children.iterate(function (child) {
@@ -90,7 +181,7 @@ function create() {
   });
 
   scoreText = this.add.text(16, 16, "Score: 0", {
-    fontSize: "30px",
+    fontSize: Math.min(gameWidth / 25, 32) + "px",
     fill: "#000",
   });
 
@@ -108,10 +199,16 @@ function update() {
   if (gameOver) {
     return;
   }
-  if (cursors.left.isDown) {
+  
+  // Check both keyboard and mobile controls
+  const leftPressed = (cursors.left.isDown || mobileControls.left);
+  const rightPressed = (cursors.right.isDown || mobileControls.right);
+  const upPressed = (cursors.up.isDown || mobileControls.up);
+  
+  if (leftPressed) {
     player.setVelocityX(-160);
     player.anims.play("left", true);
-  } else if (cursors.right.isDown) {
+  } else if (rightPressed) {
     player.setVelocityX(160);
     player.anims.play("right", true);
   } else {
@@ -119,9 +216,8 @@ function update() {
     player.anims.play("turn");
   }
 
-  if (cursors.up.isDown && player.body.touching.down) {
+  if (upPressed && player.body.touching.down) {
     player.setVelocityY(-330);
-
     jumpSound.play();
   }
 }
@@ -139,9 +235,9 @@ function collectStar(player, star) {
     });
 
     var x =
-      player.x < 400
-        ? Phaser.Math.Between(400, 800)
-        : Phaser.Math.Between(0, 400);
+      player.x < gameWidth/2
+        ? Phaser.Math.Between(gameWidth/2, gameWidth - 50)
+        : Phaser.Math.Between(50, gameWidth/2);
 
     var bomb = bombs.create(x, 16, "bomb");
     bomb.setBounce(1);
@@ -159,3 +255,10 @@ function hitBomb(player, bomb) {
 
   gameOver = true;
 }
+
+// Handle window resize for better mobile experience
+window.addEventListener('resize', () => {
+  if (game && game.scale) {
+    game.scale.refresh();
+  }
+});
