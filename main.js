@@ -192,52 +192,57 @@ function create() {
 
   platforms = this.physics.add.staticGroup();
 
-  // Fix ground platform - prevent character trapping
-  const groundScaleX = Math.max(gameWidth / 160, 3);
-  const groundPlatform = platforms.create(gameWidth/2, gameHeight - 16, "ground");
-  groundPlatform.setScale(groundScaleX, 1).refreshBody(); // Reduced Y scale to prevent trapping
+  // Fixed ground platform - proper scaling and positioning
+  const groundScaleX = Math.ceil(gameWidth / 160);
+  const groundY = gameHeight - 32; // Proper ground position
+  const groundPlatform = platforms.create(gameWidth/2, groundY, "ground");
+  groundPlatform.setScale(groundScaleX, 2).refreshBody(); // Better thickness
   
   // Mobile-friendly platform positioning with proper spacing
   const isMobile = gameWidth < 600;
-  const platformScale = isMobile ? 1.2 : 1;
+  const platformScale = isMobile ? 1.5 : 1.2;
   
   if (isMobile) {
-    // Mobile layout: properly spaced platforms to prevent overlap
-    const leftPlatform = platforms.create(gameWidth * 0.2, gameHeight * 0.75, "ground");
-    leftPlatform.setScale(platformScale, 1).refreshBody();
+    // Mobile layout: better spaced platforms to prevent overlap and improve gameplay
+    const leftPlatform = platforms.create(gameWidth * 0.15, gameHeight * 0.8, "ground");
+    leftPlatform.setScale(platformScale, 1.5).refreshBody();
     
-    const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.55, "ground");
-    centerPlatform.setScale(platformScale, 1).refreshBody();
+    const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.6, "ground");
+    centerPlatform.setScale(platformScale, 1.5).refreshBody();
     
-    const rightPlatform = platforms.create(gameWidth * 0.8, gameHeight * 0.65, "ground");
-    rightPlatform.setScale(platformScale, 1).refreshBody();
+    const rightPlatform = platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
+    rightPlatform.setScale(platformScale, 1.5).refreshBody();
     
-    const topPlatform = platforms.create(gameWidth * 0.35, gameHeight * 0.3, "ground");
-    topPlatform.setScale(platformScale * 0.8, 1).refreshBody();
+    const topLeftPlatform = platforms.create(gameWidth * 0.25, gameHeight * 0.4, "ground");
+    topLeftPlatform.setScale(platformScale * 0.7, 1.5).refreshBody();
+    
+    const topRightPlatform = platforms.create(gameWidth * 0.75, gameHeight * 0.45, "ground");
+    topRightPlatform.setScale(platformScale * 0.7, 1.5).refreshBody();
   } else {
     // Desktop layout: properly positioned platforms
-    const p1 = platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
-    p1.setScale(platformScale, 1).refreshBody();
+    const p1 = platforms.create(gameWidth * 0.85, gameHeight * 0.75, "ground");
+    p1.setScale(platformScale, 1.5).refreshBody();
     
-    const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.45, "ground");
-    p2.setScale(platformScale, 1).refreshBody();
+    const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.5, "ground");
+    p2.setScale(platformScale, 1.5).refreshBody();
     
-    const p3 = platforms.create(gameWidth * 0.9, gameHeight * 0.35, "ground");
-    p3.setScale(platformScale, 1).refreshBody();
+    const p3 = platforms.create(gameWidth * 0.9, gameHeight * 0.4, "ground");
+    p3.setScale(platformScale, 1.5).refreshBody();
     
-    const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.6, "ground");
-    p4.setScale(platformScale, 1).refreshBody();
+    const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.65, "ground");
+    p4.setScale(platformScale, 1.5).refreshBody();
   }
 
-  // Fix player spawn position - ensure they spawn above ground safely
-  const playerSpawnY = gameHeight - 100; // Safe distance above ground
+  // Fixed player spawn position - ensure they spawn safely above ground
+  const playerSpawnY = groundY - 80; // Safe distance above ground
   player = this.physics.add.sprite(100, playerSpawnY, "dude");
 
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
   
-  // Improve collision detection
-  player.setSize(28, 46); // Adjust hitbox to prevent getting stuck
+  // Improved collision body - better hitbox to prevent getting stuck
+  player.setSize(24, 40, true); // width, height, center
+  player.setOffset(4, 8); // offset from sprite origin
 
   jumpSound = this.sound.add("jumpSound");
   starSound = this.sound.add("starSound");
@@ -262,31 +267,41 @@ function create() {
 
   cursors = this.input.keyboard.createCursorKeys();
 
-  // Create stars with proper spacing
-  const starCount = Math.max(Math.floor(gameWidth / 80), 5);
+  // Create stars with better spacing and positioning
+  const starCount = Math.max(Math.floor(gameWidth / 100), 4);
   stars = this.physics.add.group({
     key: "star",
     repeat: starCount - 1,
-    setXY: { x: 50, y: 0, stepX: Math.floor((gameWidth - 100) / starCount) },
+    setXY: { x: 60, y: 0, stepX: Math.floor((gameWidth - 120) / (starCount - 1)) },
   });
 
   stars.children.iterate(function (child) {
     child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+    // Ensure stars don't get stuck
+    child.setSize(20, 20, true);
   });
 
-  // Responsive score text
-  scoreText = this.add.text(16, 16, "Score: 0", {
-    fontSize: Math.min(gameWidth / 25, 32) + "px",
+  // Responsive score text with better positioning
+  scoreText = this.add.text(20, 20, "Score: 0", {
+    fontSize: Math.min(gameWidth / 20, 28) + "px",
     fill: "#000",
     fontWeight: "bold",
     stroke: "#fff",
-    strokeThickness: 2
+    strokeThickness: 3,
+    shadow: {
+      offsetX: 2,
+      offsetY: 2,
+      color: '#000',
+      blur: 2,
+      stroke: true,
+      fill: true
+    }
   });
 
   bombs = this.physics.add.group();
 
-  // Improved collision detection
-  this.physics.add.collider(player, platforms, null, null, this);
+  // Improved collision detection with proper callbacks
+  this.physics.add.collider(player, platforms);
   this.physics.add.collider(stars, platforms);
   this.physics.add.collider(bombs, platforms);
 
@@ -304,10 +319,10 @@ function update() {
   const rightPressed = (cursors.right.isDown || mobileControls.right);
   const upPressed = (cursors.up.isDown || mobileControls.up);
   
-  // Improved movement with better collision handling
+  // Improved movement with better responsiveness
   const isMobile = gameWidth < 600;
-  const moveSpeed = isMobile ? 130 : 160;
-  const jumpForce = isMobile ? -330 : -330;
+  const moveSpeed = isMobile ? 140 : 160;
+  const jumpForce = isMobile ? -350 : -330;
   
   if (leftPressed) {
     player.setVelocityX(-moveSpeed);
@@ -320,16 +335,21 @@ function update() {
     player.anims.play("turn");
   }
 
-  // Improved jump with better ground detection
+  // Improved jump mechanics with better ground detection
   const currentTime = Date.now();
-  if (upPressed && player.body.touching.down && (currentTime - lastJumpTime > 150)) {
+  const canJump = player.body.touching.down || player.body.onFloor();
+  
+  if (upPressed && canJump && (currentTime - lastJumpTime > 200)) {
     player.setVelocityY(jumpForce);
-    jumpSound.play();
+    if (jumpSound) {
+      jumpSound.play();
+    }
     lastJumpTime = currentTime;
   }
   
-  // Prevent player from getting stuck by checking if they're overlapping with platforms
-  if (player.body.embedded) {
+  // Prevent player from getting stuck - emergency unstuck mechanism
+  if (player.body.embedded || (player.body.blocked.left && player.body.blocked.right)) {
+    player.y -= 5; // Slightly lift player
     player.body.touching.none = false;
   }
 }
