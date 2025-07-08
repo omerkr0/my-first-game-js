@@ -59,6 +59,7 @@ var stars;
 var bombs;
 var platforms;
 var cursors;
+var spaceKey;
 var score = 0;
 var scoreText;
 var gameOver = false;
@@ -406,6 +407,9 @@ function create() {
 
   cursors = this.input.keyboard.createCursorKeys();
   
+  // Space tuşunu da ekle
+  spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+  
   // Debug mode toggle with 'D' key
   this.input.keyboard.on('keydown-D', () => {
     debugMode = !debugMode;
@@ -467,7 +471,7 @@ function update() {
   // Check both keyboard and mobile controls
   const leftPressed = (cursors.left.isDown || mobileControls.left);
   const rightPressed = (cursors.right.isDown || mobileControls.right);
-  const upPressed = (cursors.up.isDown || mobileControls.up);
+  const upPressed = (cursors.up.isDown || spaceKey.isDown || mobileControls.up);
   
   // Responsive hareket hızları
   const gameWidth = this.cameras.main.width;
@@ -518,7 +522,7 @@ function update() {
       });
     }
     lastJumpTime = currentTime;
-    if (debugMode) console.log('Jump executed! canJump:', canJump, 'isOnGround:', isOnGround, 'isNearPlatform:', isNearPlatform, 'jumpForce:', jumpForce);
+    if (debugMode) console.log('Jump executed! canJump:', canJump, 'isOnGround:', isOnGround, 'isNearPlatform:', isNearPlatform, 'jumpForce:', jumpForce, 'space:', spaceKey.isDown, 'up:', cursors.up.isDown, 'mobile:', mobileControls.up);
   }
   
   // Debug bilgisi - geliştirme sırasında
