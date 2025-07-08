@@ -415,6 +415,25 @@ function create() {
     debugMode = !debugMode;
     console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
   });
+  
+  // Mobile debug - triple tap score to toggle debug mode
+  let tapCount = 0;
+  let lastTapTime = 0;
+  scoreText.setInteractive();
+  scoreText.on('pointerdown', () => {
+    const currentTime = Date.now();
+    if (currentTime - lastTapTime < 500) {
+      tapCount++;
+      if (tapCount >= 3) {
+        debugMode = !debugMode;
+        console.log('Debug mode (mobile):', debugMode ? 'ON' : 'OFF');
+        tapCount = 0;
+      }
+    } else {
+      tapCount = 1;
+    }
+    lastTapTime = currentTime;
+  });
 
   // Yıldızları daha iyi dağıt
   const starCount = Math.min(Math.max(Math.floor(gameWidth / 120), 5), 12);
@@ -496,40 +515,47 @@ function update() {
     }
   }
 
-  // Geliştirilmiş zıplama mekaniği
+  // Basitleştirilmiş ve daha güvenilir zıplama mekaniği
   const currentTime = Date.now();
-  // Daha güvenilir yer tespiti
-  const isOnGround = player.body.touching.down || player.body.blocked.down || 
-                     (player.body.velocity.y >= 0 && player.body.bottom >= player.body.world.bounds.height - 50);
   
-  // Alternatif yer tespiti - platform ile çakışma kontrolü
+  // Daha toleranslı yer tespiti
+  const isOnGround = player.body.touching.down || player.body.blocked.down;
+  const isNearGround = player.body.velocity.y >= -50 && 
+                       (player.body.bottom >= this.cameras.main.height - 100);
+  
+  // Platform yakınlığı kontrolü (daha toleranslı)
   const isNearPlatform = platforms.children.entries.some(platform => {
-    const distance = Math.abs(player.body.bottom - platform.body.top);
-    const horizontalOverlap = player.body.right > platform.body.left && 
-                             player.body.left < platform.body.right;
-    return distance < 10 && horizontalOverlap && player.body.velocity.y >= -10;
+    const verticalDistance = Math.abs(player.body.bottom - platform.body.top);
+    const horizontalOverlap = player.body.right > platform.body.left - 5 && 
+                             player.body.left < platform.body.right + 5;
+    return verticalDistance < 15 && horizontalOverlap && player.body.velocity.y >= -100;
   });
   
-  const canJump = isOnGround || isNearPlatform;
+  const canJump = isOnGround || isNearGround || isNearPlatform;
   
-  // Zıplama koşullarını gevşet ve daha responsive yap
-  if (upPressed && canJump && (currentTime - lastJumpTime > 50)) {
+  // Daha responsive zıplama - mobilde daha kısa cooldown
+  const jumpCooldown = isMobile ? 100 : 150;
+  
+  if (upPressed && canJump && (currentTime - lastJumpTime > jumpCooldown)) {
     player.setVelocityY(jumpForce);
     if (jumpSound && !jumpSound.isPlaying) {
       jumpSound.play().catch(() => {
-        // Ses çalma hatası durumunda sessiz devam et
         console.log('Jump sound could not be played');
       });
     }
     lastJumpTime = currentTime;
-    if (debugMode) console.log('Jump executed! canJump:', canJump, 'isOnGround:', isOnGround, 'isNearPlatform:', isNearPlatform, 'jumpForce:', jumpForce, 'space:', spaceKey.isDown, 'up:', cursors.up.isDown, 'mobile:', mobileControls.up);
+    if (debugMode) console.log('Jump executed! Mobile:', isMobile, 'canJump:', canJump, 'jumpForce:', jumpForce, 'controls:', {space: spaceKey.isDown, up: cursors.up.isDown, mobile: mobileControls.up});
   }
   
-  // Debug bilgisi - geliştirme sırasında
-  if (upPressed && !canJump) {
-    if (debugMode) console.log('Jump blocked. touching.down:', player.body.touching.down, 
-                'blocked.down:', player.body.blocked.down, 'velocity.y:', player.body.velocity.y,
-                'isNearPlatform:', isNearPlatform);
+  // Mobile debug için
+  if (upPressed && !canJump && debugMode) {
+    console.log('Jump blocked:', {
+      isOnGround, isNearGround, isNearPlatform, 
+      cooldownReady: (currentTime - lastJumpTime > jumpCooldown),
+      mobileUp: mobileControls.up,
+      playerY: player.y,
+      velocity: player.body.velocity.y
+    });
   }
   
   // Oyuncunun düşmesini önle
