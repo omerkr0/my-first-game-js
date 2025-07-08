@@ -37,7 +37,7 @@ var config = {
   physics: {
     default: "arcade",
     arcade: {
-      gravity: { y: 300 },
+      gravity: { y: 280 },
       debug: false,
     },
   },
@@ -72,6 +72,9 @@ var mobileControls = {
 
 var lastJumpTime = 0;
 
+// Debug mode - set to false for production
+var debugMode = false;
+
 var game = new Phaser.Game(config);
 
 // Mobile control event listeners with improved responsiveness
@@ -97,22 +100,31 @@ function setupMobileControls() {
   }
   
   if (leftBtn) {
+    // Touch events
     leftBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       mobileControls.left = true;
       addPressedClass(leftBtn);
       vibrate();
-    });
+      if (debugMode) console.log('Left button pressed (touch)');
+    }, { passive: false });
+    
     leftBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       mobileControls.left = false;
       removePressedClass(leftBtn);
-    });
+      if (debugMode) console.log('Left button released (touch)');
+    }, { passive: false });
+    
     leftBtn.addEventListener('touchcancel', (e) => {
       e.preventDefault();
       mobileControls.left = false;
       removePressedClass(leftBtn);
-    });
+    }, { passive: false });
+    
+    // Mouse events for desktop testing
     leftBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       mobileControls.left = true;
@@ -130,22 +142,31 @@ function setupMobileControls() {
   }
   
   if (rightBtn) {
+    // Touch events
     rightBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       mobileControls.right = true;
       addPressedClass(rightBtn);
       vibrate();
-    });
+      if (debugMode) console.log('Right button pressed (touch)');
+    }, { passive: false });
+    
     rightBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       mobileControls.right = false;
       removePressedClass(rightBtn);
-    });
+      if (debugMode) console.log('Right button released (touch)');
+    }, { passive: false });
+    
     rightBtn.addEventListener('touchcancel', (e) => {
       e.preventDefault();
       mobileControls.right = false;
       removePressedClass(rightBtn);
-    });
+    }, { passive: false });
+    
+    // Mouse events for desktop testing
     rightBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       mobileControls.right = true;
@@ -163,37 +184,55 @@ function setupMobileControls() {
   }
   
   if (jumpBtn) {
+    // Touch events
     jumpBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       mobileControls.up = true;
       addPressedClass(jumpBtn);
       vibrate();
-    });
+      if (debugMode) console.log('Jump button pressed (touch)');
+    }, { passive: false });
+    
     jumpBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       mobileControls.up = false;
       removePressedClass(jumpBtn);
-    });
+      if (debugMode) console.log('Jump button released (touch)');
+    }, { passive: false });
+    
     jumpBtn.addEventListener('touchcancel', (e) => {
       e.preventDefault();
       mobileControls.up = false;
       removePressedClass(jumpBtn);
-    });
+    }, { passive: false });
+    
+    // Mouse events for desktop testing
     jumpBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       mobileControls.up = true;
       addPressedClass(jumpBtn);
+      if (debugMode) console.log('Jump button pressed (mouse)');
     });
     jumpBtn.addEventListener('mouseup', (e) => {
       e.preventDefault();
       mobileControls.up = false;
       removePressedClass(jumpBtn);
+      if (debugMode) console.log('Jump button released (mouse)');
     });
     jumpBtn.addEventListener('mouseleave', (e) => {
       mobileControls.up = false;
       removePressedClass(jumpBtn);
     });
   }
+  
+  // Debug: Log mobile controls state periodically
+  setInterval(() => {
+    if (mobileControls.left || mobileControls.right || mobileControls.up) {
+      if (debugMode) console.log('Mobile controls state:', mobileControls);
+    }
+  }, 1000);
 }
 
 // Setup mobile controls when DOM is ready
@@ -315,11 +354,27 @@ function create() {
   player.setCollideWorldBounds(true);
   
   // Collision body ayarlarını basitleştir
-  player.body.setSize(20, 32);
-  player.body.setOffset(6, 16);
+  player.body.setSize(24, 40);
+  player.body.setOffset(4, 8);
 
   jumpSound = this.sound.add("jumpSound", { volume: 0.5 });
   starSound = this.sound.add("starSound", { volume: 0.5 });
+  
+  // Test sounds and disable if they fail to load
+  try {
+    if (!jumpSound || !jumpSound.totalDuration) {
+      console.warn('Jump sound not loaded properly, jumping will work without sound');
+      jumpSound = null;
+    }
+    if (!starSound || !starSound.totalDuration) {
+      console.warn('Star sound not loaded properly, star collection will work without sound');
+      starSound = null;
+    }
+  } catch (error) {
+    console.warn('Sound initialization error, continuing without sounds:', error);
+    jumpSound = null;
+    starSound = null;
+  }
 
   // Animasyonları oluştur - oyuncu oluşturulduktan hemen sonra
   try {
@@ -350,6 +405,12 @@ function create() {
   }
 
   cursors = this.input.keyboard.createCursorKeys();
+  
+  // Debug mode toggle with 'D' key
+  this.input.keyboard.on('keydown-D', () => {
+    debugMode = !debugMode;
+    console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
+  });
 
   // Yıldızları daha iyi dağıt
   const starCount = Math.min(Math.max(Math.floor(gameWidth / 120), 5), 12);
@@ -412,7 +473,7 @@ function update() {
   const gameWidth = this.cameras.main.width;
   const isMobile = gameWidth < 768;
   const moveSpeed = isMobile ? 130 : 160;
-  const jumpForce = isMobile ? -330 : -350;
+  const jumpForce = isMobile ? -380 : -420;
   
   if (leftPressed) {
     player.setVelocityX(-moveSpeed);
@@ -431,16 +492,40 @@ function update() {
     }
   }
 
-  // Geliştirilmiş zıplama mekaniği - body kullan
+  // Geliştirilmiş zıplama mekaniği
   const currentTime = Date.now();
-  const isOnGround = player.body.touching.down || player.body.blocked.down;
+  // Daha güvenilir yer tespiti
+  const isOnGround = player.body.touching.down || player.body.blocked.down || 
+                     (player.body.velocity.y >= 0 && player.body.bottom >= player.body.world.bounds.height - 50);
   
-  if (upPressed && isOnGround && (currentTime - lastJumpTime > 100)) {
+  // Alternatif yer tespiti - platform ile çakışma kontrolü
+  const isNearPlatform = platforms.children.entries.some(platform => {
+    const distance = Math.abs(player.body.bottom - platform.body.top);
+    const horizontalOverlap = player.body.right > platform.body.left && 
+                             player.body.left < platform.body.right;
+    return distance < 10 && horizontalOverlap && player.body.velocity.y >= -10;
+  });
+  
+  const canJump = isOnGround || isNearPlatform;
+  
+  // Zıplama koşullarını gevşet ve daha responsive yap
+  if (upPressed && canJump && (currentTime - lastJumpTime > 50)) {
     player.setVelocityY(jumpForce);
     if (jumpSound && !jumpSound.isPlaying) {
-      jumpSound.play();
+      jumpSound.play().catch(() => {
+        // Ses çalma hatası durumunda sessiz devam et
+        console.log('Jump sound could not be played');
+      });
     }
     lastJumpTime = currentTime;
+    if (debugMode) console.log('Jump executed! canJump:', canJump, 'isOnGround:', isOnGround, 'isNearPlatform:', isNearPlatform, 'jumpForce:', jumpForce);
+  }
+  
+  // Debug bilgisi - geliştirme sırasında
+  if (upPressed && !canJump) {
+    if (debugMode) console.log('Jump blocked. touching.down:', player.body.touching.down, 
+                'blocked.down:', player.body.blocked.down, 'velocity.y:', player.body.velocity.y,
+                'isNearPlatform:', isNearPlatform);
   }
   
   // Oyuncunun düşmesini önle
@@ -457,7 +542,9 @@ function collectStar(player, star) {
   scoreText.setText(`Score: ${score}`);
   
   if (starSound && !starSound.isPlaying) {
-    starSound.play();
+    starSound.play().catch(() => {
+      console.log('Star sound could not be played');
+    });
   }
 
   if (stars.countActive(true) === 0) {
