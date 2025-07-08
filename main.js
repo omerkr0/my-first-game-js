@@ -46,7 +46,12 @@ var config = {
     create: create,
     update: update,
   },
-  backgroundColor: '#87CEEB' // Gökyüzü rengi
+  backgroundColor: '#87CEEB', // Gökyüzü rengi
+  // Base path ekle
+  loader: {
+    baseURL: window.location.origin + window.location.pathname.replace(/[^\/]*$/, ''),
+    crossOrigin: 'anonymous'
+  }
 };
 
 var player;
@@ -197,22 +202,35 @@ document.addEventListener('DOMContentLoaded', setupMobileControls);
 function preload() {
   // Loading göstergesini gizle
   const loadingElement = document.querySelector('.loading');
-  if (loadingElement) {
-    this.load.on('complete', () => {
-      loadingElement.style.display = 'none';
-    });
-  }
   
+  // Hata yakalama ekle
+  this.load.on('loaderror', (file) => {
+    console.error('Dosya yüklenemedi:', file.key, file.src);
+  });
+  
+  this.load.on('complete', () => {
+    console.log('Tüm dosyalar yüklendi');
+    if (loadingElement) {
+      loadingElement.style.display = 'none';
+    }
+  });
+  
+  // Dosya yollarını kontrol et
   this.load.image("sky", "assets/images/sky.png");
   this.load.image("ground", "assets/images/platform.png");
   this.load.image("star", "assets/images/star.png");
   this.load.image("bomb", "assets/images/bomb.png");
+  
+  // Sprite sheet için boyutları doğrula
   this.load.spritesheet("dude", "assets/images/dude.png", {
     frameWidth: 32,
     frameHeight: 48,
+    endFrame: 8
   });
-  this.load.audio("jumpSound", "assets/sounds/jumping.mp3");
-  this.load.audio("starSound", "assets/sounds/star.mp3");
+  
+  // Ses dosyalarını yükle (hata durumunda sessiz devam et)
+  this.load.audio("jumpSound", ["assets/sounds/jumping.mp3"]);
+  this.load.audio("starSound", ["assets/sounds/star.mp3"]);
 }
 
 function create() {
@@ -226,7 +244,7 @@ function create() {
   platforms = this.physics.add.staticGroup();
 
   // Ana zemin platformu
-  const groundY = gameHeight - 20; // Zemini biraz daha aşağı al
+  const groundY = gameHeight - 40; // Zemini biraz daha yukarı al
   const groundPlatform = platforms.create(gameWidth / 2, groundY, "ground");
   const groundScaleX = gameWidth / groundPlatform.width;
   groundPlatform.setScale(groundScaleX, 1).refreshBody();
@@ -269,37 +287,76 @@ function create() {
       .setScale(0.7, 1).refreshBody();
   }
 
-  // Oyuncu pozisyonu - zeminden yukarıda başlat
+  // Oyuncu pozisyonu - zeminden yukarıda başlat ve görünür olduğundan emin ol
   const playerSpawnY = groundY - 100;
-  player = this.physics.add.sprite(gameWidth * 0.1, playerSpawnY, "dude");
+  
+  // Sprite yerine basit bir dikdörtgen kullan
+  const graphics = this.add.graphics();
+  graphics.fillStyle(0x00ff00, 1); // Yeşil renk
+  graphics.fillRect(0, 0, 32, 48);
+  graphics.generateTexture('playerTexture', 32, 48);
+  graphics.destroy();
+  
+  player = this.physics.add.sprite(gameWidth * 0.1, playerSpawnY, 'playerTexture');
+
+  // Oyuncunun görünür olduğundan emin ol
+  player.setVisible(true);
+  player.setAlpha(1);
+  player.setDepth(10); // Diğer nesnelerin üstünde görünsün
+  player.setTint(0x00ff00); // Yeşil renk
+  
+  // Sprite yüklenmezse yedek olarak kırmızı kare göster
+  if (!player.texture || player.texture.key === '__MISSING') {
+    console.error('Karakter sprite yüklenemedi! Yedek grafik kullanılıyor.');
+    // Yedek olarak basit bir grafik oluştur
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillRect(0, 0, 32, 48);
+    graphics.generateTexture('dudeBackup', 32, 48);
+    graphics.destroy();
+    
+    player.setTexture('dudeBackup');
+  }
 
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
   
-  // Collision body ayarları
-  player.setSize(24, 40, true);
-  player.setOffset(4, 8);
+  // Collision body ayarlarını basitleştir
+  player.body.setSize(20, 32);
+  player.body.setOffset(6, 16);
 
-  jumpSound = this.sound.add("jumpSound");
-  starSound = this.sound.add("starSound");
+  jumpSound = this.sound.add("jumpSound", { volume: 0.5 });
+  starSound = this.sound.add("starSound", { volume: 0.5 });
 
-  this.anims.create({
-    key: "left",
-    frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }),
-    frameRate: 10,
-    repeat: -1,
-  });
-  this.anims.create({
-    key: "turn",
-    frames: [{ key: "dude", frame: 4 }],
-    frameRate: 20,
-  });
-  this.anims.create({
-    key: "right",
-    frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
-    frameRate: 10,
-    repeat: -1,
-  });
+  // Animasyonları oluştur - oyuncu oluşturulduktan hemen sonra
+  /* Sprite kullanmadığımız için animasyonları devre dışı bırak
+  try {
+    this.anims.create({
+      key: "left",
+      frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "turn",
+      frames: [{ key: "dude", frame: 4 }],
+      frameRate: 20,
+    });
+    this.anims.create({
+      key: "right",
+      frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    // Başlangıç animasyonunu ayarla
+    player.anims.play("turn");
+  } catch (error) {
+    console.error('Animasyon oluşturma hatası:', error);
+    // Animasyon yoksa statik frame kullan
+    player.setFrame(4);
+  }
+  */
 
   cursors = this.input.keyboard.createCursorKeys();
 
@@ -364,24 +421,33 @@ function update() {
   const gameWidth = this.cameras.main.width;
   const isMobile = gameWidth < 768;
   const moveSpeed = isMobile ? 130 : 160;
-  const jumpForce = isMobile ? -320 : -330;
+  const jumpForce = isMobile ? -330 : -350;
   
   if (leftPressed) {
     player.setVelocityX(-moveSpeed);
-    player.anims.play("left", true);
+    player.setTint(0x0000ff); // Sola giderken mavi
+    /* if (player.anims) {
+      player.anims.play("left", true);
+    } */
   } else if (rightPressed) {
     player.setVelocityX(moveSpeed);
-    player.anims.play("right", true);
+    player.setTint(0xff0000); // Sağa giderken kırmızı
+    /* if (player.anims) {
+      player.anims.play("right", true);
+    } */
   } else {
     player.setVelocityX(0);
-    player.anims.play("turn");
+    player.setTint(0x00ff00); // Duruyorken yeşil
+    /* if (player.anims) {
+      player.anims.play("turn");
+    } */
   }
 
-  // Geliştirilmiş zıplama mekaniği
+  // Geliştirilmiş zıplama mekaniği - body kullan
   const currentTime = Date.now();
-  const canJump = player.body.touching.down || player.body.onFloor();
+  const isOnGround = player.body.touching.down || player.body.blocked.down;
   
-  if (upPressed && canJump && (currentTime - lastJumpTime > 250)) {
+  if (upPressed && isOnGround && (currentTime - lastJumpTime > 100)) {
     player.setVelocityY(jumpForce);
     if (jumpSound && !jumpSound.isPlaying) {
       jumpSound.play();
@@ -389,9 +455,10 @@ function update() {
     lastJumpTime = currentTime;
   }
   
-  // Oyuncunun sıkışmasını önle
-  if (player.body.embedded) {
-    player.y -= 2;
+  // Oyuncunun düşmesini önle
+  if (player.y > this.cameras.main.height) {
+    player.setY(100);
+    player.setX(this.cameras.main.width * 0.1);
   }
 }
 
@@ -427,7 +494,7 @@ function collectStar(player, star) {
 function hitBomb(player, bomb) {
   this.physics.pause();
   player.setTint(0xff0000);
-  player.anims.play("turn");
+  // player.anims.play("turn"); // Animasyon kullanmıyoruz
   gameOver = true;
 
   // Game over mesajı
