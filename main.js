@@ -1,17 +1,38 @@
-// Get screen dimensions for responsive design (fill the entire viewport)
-const gameWidth = window.innerWidth;
-const gameHeight = window.innerHeight;
+// Responsive game dimensions
+function getGameDimensions() {
+  const isMobile = window.innerWidth < 1024 || window.matchMedia('(pointer: coarse)').matches;
+  const container = document.getElementById('game-container');
+  
+  if (!container) {
+    return { width: 800, height: 600 };
+  }
+  
+  let availableHeight = window.innerHeight;
+  
+  // Mobil cihazlarda kontrol alanı için yer ayır
+  if (isMobile) {
+    const controlsHeight = window.innerWidth < 480 ? 80 : 100;
+    availableHeight = window.innerHeight - controlsHeight;
+  }
+  
+  return {
+    width: container.offsetWidth || window.innerWidth,
+    height: availableHeight
+  };
+}
+
+const gameDimensions = getGameDimensions();
 
 var config = {
   type: Phaser.AUTO,
-  width: gameWidth,
-  height: gameHeight,
+  width: gameDimensions.width,
+  height: gameDimensions.height,
   parent: 'game-container',
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: gameWidth,
-    height: gameHeight
+    width: gameDimensions.width,
+    height: gameDimensions.height
   },
   physics: {
     default: "arcade",
@@ -25,6 +46,7 @@ var config = {
     create: create,
     update: update,
   },
+  backgroundColor: '#87CEEB' // Gökyüzü rengi
 };
 
 var player;
@@ -173,6 +195,14 @@ function setupMobileControls() {
 document.addEventListener('DOMContentLoaded', setupMobileControls);
 
 function preload() {
+  // Loading göstergesini gizle
+  const loadingElement = document.querySelector('.loading');
+  if (loadingElement) {
+    this.load.on('complete', () => {
+      loadingElement.style.display = 'none';
+    });
+  }
+  
   this.load.image("sky", "assets/images/sky.png");
   this.load.image("ground", "assets/images/platform.png");
   this.load.image("star", "assets/images/star.png");
@@ -186,66 +216,69 @@ function preload() {
 }
 
 function create() {
+  const gameWidth = this.cameras.main.width;
+  const gameHeight = this.cameras.main.height;
+  
   // Scale background to fit screen
   const bg = this.add.image(gameWidth/2, gameHeight/2, "sky");
   bg.setDisplaySize(gameWidth, gameHeight);
 
   platforms = this.physics.add.staticGroup();
 
-  // Scale the main ground to span the full game width without oversizing
-  const groundY = gameHeight - 32; // Proper ground position
+  // Ana zemin platformu
+  const groundY = gameHeight - 20; // Zemini biraz daha aşağı al
   const groundPlatform = platforms.create(gameWidth / 2, groundY, "ground");
-  // Match the width of the ground to the game width while keeping the original height
   const groundScaleX = gameWidth / groundPlatform.width;
   groundPlatform.setScale(groundScaleX, 1).refreshBody();
 
-  // Mobile-friendly platform positioning with proper spacing
-  const isMobile = gameWidth < 600;
-  // Keep additional platforms narrow so they don't block too much of the screen
-  const platformScaleX = isMobile ? 0.9 : 1;
-  const platformScaleY = 1; // normal height
+  // Responsive platform düzeni
+  const isMobile = gameWidth < 768;
+  const platformWidth = 200; // Sabit platform genişliği
   
   if (isMobile) {
-    // Mobile layout: better spaced platforms to prevent overlap and improve gameplay
-    const leftPlatform = platforms.create(gameWidth * 0.15, gameHeight * 0.8, "ground");
-    leftPlatform.setScale(platformScaleX, platformScaleY).refreshBody();
+    // Mobil düzen - daha iyi yerleştirilmiş platformlar
+    platforms.create(gameWidth * 0.2, gameHeight * 0.75, "ground")
+      .setScale(0.8, 1).refreshBody();
     
-    const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.6, "ground");
-    centerPlatform.setScale(platformScaleX, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.7, gameHeight * 0.65, "ground")
+      .setScale(0.8, 1).refreshBody();
     
-    const rightPlatform = platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
-    rightPlatform.setScale(platformScaleX, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.5, gameHeight * 0.5, "ground")
+      .setScale(0.7, 1).refreshBody();
     
-    const topLeftPlatform = platforms.create(gameWidth * 0.25, gameHeight * 0.4, "ground");
-    topLeftPlatform.setScale(platformScaleX * 0.8, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.15, gameHeight * 0.35, "ground")
+      .setScale(0.6, 1).refreshBody();
     
-    const topRightPlatform = platforms.create(gameWidth * 0.75, gameHeight * 0.45, "ground");
-    topRightPlatform.setScale(platformScaleX * 0.8, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.85, gameHeight * 0.4, "ground")
+      .setScale(0.6, 1).refreshBody();
   } else {
-    // Desktop layout: properly positioned platforms
-    const p1 = platforms.create(gameWidth * 0.85, gameHeight * 0.75, "ground");
-    p1.setScale(platformScaleX, platformScaleY).refreshBody();
+    // Desktop düzen
+    platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground")
+      .setScale(1, 1).refreshBody();
     
-    const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.5, "ground");
-    p2.setScale(platformScaleX, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.15, gameHeight * 0.55, "ground")
+      .setScale(1, 1).refreshBody();
     
-    const p3 = platforms.create(gameWidth * 0.9, gameHeight * 0.4, "ground");
-    p3.setScale(platformScaleX, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.5, gameHeight * 0.45, "ground")
+      .setScale(0.8, 1).refreshBody();
     
-    const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.65, "ground");
-    p4.setScale(platformScaleX, platformScaleY).refreshBody();
+    platforms.create(gameWidth * 0.3, gameHeight * 0.3, "ground")
+      .setScale(0.7, 1).refreshBody();
+    
+    platforms.create(gameWidth * 0.7, gameHeight * 0.25, "ground")
+      .setScale(0.7, 1).refreshBody();
   }
 
-  // Fixed player spawn position - ensure they spawn safely above ground
-  const playerSpawnY = groundY - 80; // Safe distance above ground
-  player = this.physics.add.sprite(100, playerSpawnY, "dude");
+  // Oyuncu pozisyonu - zeminden yukarıda başlat
+  const playerSpawnY = groundY - 100;
+  player = this.physics.add.sprite(gameWidth * 0.1, playerSpawnY, "dude");
 
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
   
-  // Improved collision body - better hitbox to prevent getting stuck
-  player.setSize(24, 40, true); // width, height, center
-  player.setOffset(4, 8); // offset from sprite origin
+  // Collision body ayarları
+  player.setSize(24, 40, true);
+  player.setOffset(4, 8);
 
   jumpSound = this.sound.add("jumpSound");
   starSound = this.sound.add("starSound");
@@ -270,28 +303,31 @@ function create() {
 
   cursors = this.input.keyboard.createCursorKeys();
 
-  // Create stars with better spacing and positioning
-  const starCount = Math.max(Math.floor(gameWidth / 100), 4);
+  // Yıldızları daha iyi dağıt
+  const starCount = Math.min(Math.max(Math.floor(gameWidth / 120), 5), 12);
   stars = this.physics.add.group({
     key: "star",
     repeat: starCount - 1,
-    // Start a bit lower so the stars don't cover the score text
-    setXY: { x: 60, y: 70, stepX: Math.floor((gameWidth - 120) / (starCount - 1)) },
+    setXY: { 
+      x: 50, 
+      y: 50, 
+      stepX: (gameWidth - 100) / (starCount - 1) 
+    },
   });
 
   stars.children.iterate(function (child) {
     child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-    // Ensure stars don't get stuck
     child.setSize(20, 20, true);
   });
 
-  // Responsive score text with better positioning
+  // Responsive skor metni
+  const fontSize = Math.min(gameWidth / 25, 32);
   scoreText = this.add.text(20, 20, "Score: 0", {
-    fontSize: Math.min(gameWidth / 20, 28) + "px",
-    fill: "#000",
+    fontSize: fontSize + "px",
+    fill: "#fff",
     fontWeight: "bold",
-    stroke: "#fff",
-    strokeThickness: 3,
+    stroke: "#000",
+    strokeThickness: 4,
     shadow: {
       offsetX: 2,
       offsetY: 2,
@@ -301,6 +337,7 @@ function create() {
       fill: true
     }
   });
+  scoreText.setScrollFactor(0); // Kamera hareketi ile hareket etmez
 
   bombs = this.physics.add.group();
 
@@ -323,10 +360,11 @@ function update() {
   const rightPressed = (cursors.right.isDown || mobileControls.right);
   const upPressed = (cursors.up.isDown || mobileControls.up);
   
-  // Improved movement with better responsiveness
-  const isMobile = gameWidth < 600;
-  const moveSpeed = isMobile ? 140 : 160;
-  const jumpForce = isMobile ? -350 : -330;
+  // Responsive hareket hızları
+  const gameWidth = this.cameras.main.width;
+  const isMobile = gameWidth < 768;
+  const moveSpeed = isMobile ? 130 : 160;
+  const jumpForce = isMobile ? -320 : -330;
   
   if (leftPressed) {
     player.setVelocityX(-moveSpeed);
@@ -339,22 +377,21 @@ function update() {
     player.anims.play("turn");
   }
 
-  // Improved jump mechanics with better ground detection
+  // Geliştirilmiş zıplama mekaniği
   const currentTime = Date.now();
   const canJump = player.body.touching.down || player.body.onFloor();
   
-  if (upPressed && canJump && (currentTime - lastJumpTime > 200)) {
+  if (upPressed && canJump && (currentTime - lastJumpTime > 250)) {
     player.setVelocityY(jumpForce);
-    if (jumpSound) {
+    if (jumpSound && !jumpSound.isPlaying) {
       jumpSound.play();
     }
     lastJumpTime = currentTime;
   }
   
-  // Prevent player from getting stuck - emergency unstuck mechanism
-  if (player.body.embedded || (player.body.blocked.left && player.body.blocked.right)) {
-    player.y -= 5; // Slightly lift player
-    player.body.touching.none = false;
+  // Oyuncunun sıkışmasını önle
+  if (player.body.embedded) {
+    player.y -= 2;
   }
 }
 
@@ -363,17 +400,22 @@ function collectStar(player, star) {
 
   score += 10;
   scoreText.setText(`Score: ${score}`);
-  starSound.play();
+  
+  if (starSound && !starSound.isPlaying) {
+    starSound.play();
+  }
 
   if (stars.countActive(true) === 0) {
+    // Yıldızları yeniden oluştur
     stars.children.iterate(function (child) {
       child.enableBody(true, child.x, 0, true, true);
     });
 
-    var x =
-      player.x < gameWidth/2
-        ? Phaser.Math.Between(gameWidth/2, gameWidth - 50)
-        : Phaser.Math.Between(50, gameWidth/2);
+    // Bomba ekle
+    const gameWidth = this.cameras.main.width;
+    var x = player.x < gameWidth/2
+      ? Phaser.Math.Between(gameWidth/2, gameWidth - 50)
+      : Phaser.Math.Between(50, gameWidth/2);
 
     var bomb = bombs.create(x, 16, "bomb");
     bomb.setBounce(1);
@@ -384,17 +426,66 @@ function collectStar(player, star) {
 
 function hitBomb(player, bomb) {
   this.physics.pause();
-
   player.setTint(0xff0000);
-
   player.anims.play("turn");
-
   gameOver = true;
+
+  // Game over mesajı
+  const gameWidth = this.cameras.main.width;
+  const gameHeight = this.cameras.main.height;
+  const fontSize = Math.min(gameWidth / 12, 48);
+  
+  const gameOverText = this.add.text(gameWidth/2, gameHeight/2, 'GAME OVER', {
+    fontSize: fontSize + 'px',
+    fill: '#ff0000',
+    fontWeight: 'bold',
+    stroke: '#fff',
+    strokeThickness: 6
+  });
+  gameOverText.setOrigin(0.5);
+  
+  // Yeniden başlat mesajı
+  const restartText = this.add.text(gameWidth/2, gameHeight/2 + fontSize + 20, 'Tap or Press SPACE to Restart', {
+    fontSize: (fontSize * 0.5) + 'px',
+    fill: '#fff',
+    fontWeight: 'bold',
+    stroke: '#000',
+    strokeThickness: 4
+  });
+  restartText.setOrigin(0.5);
+  
+  // Yeniden başlatma
+  this.input.on('pointerdown', () => {
+    this.scene.restart();
+    gameOver = false;
+    score = 0;
+  });
+  
+  this.input.keyboard.on('keydown-SPACE', () => {
+    this.scene.restart();
+    gameOver = false;
+    score = 0;
+  });
 }
 
-// Handle window resize for better mobile experience
+// Pencere boyutu değiştiğinde oyunu yeniden boyutlandır
+let resizeTimeout;
 window.addEventListener('resize', () => {
-  if (game && game.scale) {
-    game.scale.refresh();
-  }
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if (game && game.scale) {
+      const newDimensions = getGameDimensions();
+      game.scale.resize(newDimensions.width, newDimensions.height);
+    }
+  }, 100);
 });
+
+// Dokunmatik cihazlarda scroll'u engelle
+document.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+}, { passive: false });
+
+// iOS'ta bounce efektini engelle
+document.body.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+}, { passive: false });
