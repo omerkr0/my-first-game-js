@@ -192,46 +192,52 @@ function create() {
 
   platforms = this.physics.add.staticGroup();
 
-  // Responsive platform positioning with mobile optimization
-  const groundScale = Math.max(gameWidth / 160, 3); // Ensure ground covers width
-  platforms.create(gameWidth/2, gameHeight - 20, "ground").setScale(groundScale, 2).refreshBody();
+  // Fix ground platform - prevent character trapping
+  const groundScaleX = Math.max(gameWidth / 160, 3);
+  const groundPlatform = platforms.create(gameWidth/2, gameHeight - 16, "ground");
+  groundPlatform.setScale(groundScaleX, 1).refreshBody(); // Reduced Y scale to prevent trapping
   
-  // Mobile-friendly platform positioning and sizing
+  // Mobile-friendly platform positioning with proper spacing
   const isMobile = gameWidth < 600;
-  const platformScale = isMobile ? 1.5 : 1; // Larger platforms on mobile
+  const platformScale = isMobile ? 1.2 : 1;
   
   if (isMobile) {
-    // Mobile layout: fewer, larger, easier-to-reach platforms
+    // Mobile layout: properly spaced platforms to prevent overlap
     const leftPlatform = platforms.create(gameWidth * 0.2, gameHeight * 0.75, "ground");
-    leftPlatform.setScale(platformScale * 1.2).refreshBody();
+    leftPlatform.setScale(platformScale, 1).refreshBody();
     
-    const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.5, "ground");
-    centerPlatform.setScale(platformScale * 1.3).refreshBody();
+    const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.55, "ground");
+    centerPlatform.setScale(platformScale, 1).refreshBody();
     
     const rightPlatform = platforms.create(gameWidth * 0.8, gameHeight * 0.65, "ground");
-    rightPlatform.setScale(platformScale * 1.2).refreshBody();
+    rightPlatform.setScale(platformScale, 1).refreshBody();
     
-    const topPlatform = platforms.create(gameWidth * 0.35, gameHeight * 0.25, "ground");
-    topPlatform.setScale(platformScale).refreshBody();
+    const topPlatform = platforms.create(gameWidth * 0.35, gameHeight * 0.3, "ground");
+    topPlatform.setScale(platformScale * 0.8, 1).refreshBody();
   } else {
-    // Desktop layout: original positioning with slight improvements
+    // Desktop layout: properly positioned platforms
     const p1 = platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
-    p1.setScale(platformScale).refreshBody();
+    p1.setScale(platformScale, 1).refreshBody();
     
-    const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.4, "ground");
-    p2.setScale(platformScale).refreshBody();
+    const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.45, "ground");
+    p2.setScale(platformScale, 1).refreshBody();
     
     const p3 = platforms.create(gameWidth * 0.9, gameHeight * 0.35, "ground");
-    p3.setScale(platformScale).refreshBody();
+    p3.setScale(platformScale, 1).refreshBody();
     
-    const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.55, "ground");
-    p4.setScale(platformScale).refreshBody();
+    const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.6, "ground");
+    p4.setScale(platformScale, 1).refreshBody();
   }
 
-  player = this.physics.add.sprite(100, gameHeight - 150, "dude");
+  // Fix player spawn position - ensure they spawn above ground safely
+  const playerSpawnY = gameHeight - 100; // Safe distance above ground
+  player = this.physics.add.sprite(100, playerSpawnY, "dude");
 
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
+  
+  // Improve collision detection
+  player.setSize(28, 46); // Adjust hitbox to prevent getting stuck
 
   jumpSound = this.sound.add("jumpSound");
   starSound = this.sound.add("starSound");
@@ -256,24 +262,31 @@ function create() {
 
   cursors = this.input.keyboard.createCursorKeys();
 
+  // Create stars with proper spacing
+  const starCount = Math.max(Math.floor(gameWidth / 80), 5);
   stars = this.physics.add.group({
     key: "star",
-    repeat: Math.floor(gameWidth / 60) - 1, // Responsive star count
-    setXY: { x: 30, y: 0, stepX: Math.floor(gameWidth / Math.floor(gameWidth / 60)) },
+    repeat: starCount - 1,
+    setXY: { x: 50, y: 0, stepX: Math.floor((gameWidth - 100) / starCount) },
   });
 
   stars.children.iterate(function (child) {
     child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
   });
 
+  // Responsive score text
   scoreText = this.add.text(16, 16, "Score: 0", {
     fontSize: Math.min(gameWidth / 25, 32) + "px",
     fill: "#000",
+    fontWeight: "bold",
+    stroke: "#fff",
+    strokeThickness: 2
   });
 
   bombs = this.physics.add.group();
 
-  this.physics.add.collider(player, platforms);
+  // Improved collision detection
+  this.physics.add.collider(player, platforms, null, null, this);
   this.physics.add.collider(stars, platforms);
   this.physics.add.collider(bombs, platforms);
 
@@ -291,10 +304,10 @@ function update() {
   const rightPressed = (cursors.right.isDown || mobileControls.right);
   const upPressed = (cursors.up.isDown || mobileControls.up);
   
-  // Mobile-optimized movement speeds
+  // Improved movement with better collision handling
   const isMobile = gameWidth < 600;
-  const moveSpeed = isMobile ? 140 : 160; // Slightly slower on mobile for better control
-  const jumpForce = isMobile ? -350 : -330; // Slightly higher jump on mobile
+  const moveSpeed = isMobile ? 130 : 160;
+  const jumpForce = isMobile ? -330 : -330;
   
   if (leftPressed) {
     player.setVelocityX(-moveSpeed);
@@ -307,12 +320,17 @@ function update() {
     player.anims.play("turn");
   }
 
-  // Jump with cooldown to prevent accidental double jumps on mobile
+  // Improved jump with better ground detection
   const currentTime = Date.now();
-  if (upPressed && player.body.touching.down && (currentTime - lastJumpTime > 200)) {
+  if (upPressed && player.body.touching.down && (currentTime - lastJumpTime > 150)) {
     player.setVelocityY(jumpForce);
     jumpSound.play();
     lastJumpTime = currentTime;
+  }
+  
+  // Prevent player from getting stuck by checking if they're overlapping with platforms
+  if (player.body.embedded) {
+    player.body.touching.none = false;
   }
 }
 
