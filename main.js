@@ -290,20 +290,13 @@ function create() {
   // Oyuncu pozisyonu - zeminden yukarıda başlat ve görünür olduğundan emin ol
   const playerSpawnY = groundY - 100;
   
-  // Sprite yerine basit bir dikdörtgen kullan
-  const graphics = this.add.graphics();
-  graphics.fillStyle(0x00ff00, 1); // Yeşil renk
-  graphics.fillRect(0, 0, 32, 48);
-  graphics.generateTexture('playerTexture', 32, 48);
-  graphics.destroy();
-  
-  player = this.physics.add.sprite(gameWidth * 0.1, playerSpawnY, 'playerTexture');
+  // Orijinal sprite karakterini kullan
+  player = this.physics.add.sprite(gameWidth * 0.1, playerSpawnY, 'dude');
 
   // Oyuncunun görünür olduğundan emin ol
   player.setVisible(true);
   player.setAlpha(1);
   player.setDepth(10); // Diğer nesnelerin üstünde görünsün
-  player.setTint(0x00ff00); // Yeşil renk
   
   // Sprite yüklenmezse yedek olarak kırmızı kare göster
   if (!player.texture || player.texture.key === '__MISSING') {
@@ -329,7 +322,6 @@ function create() {
   starSound = this.sound.add("starSound", { volume: 0.5 });
 
   // Animasyonları oluştur - oyuncu oluşturulduktan hemen sonra
-  /* Sprite kullanmadığımız için animasyonları devre dışı bırak
   try {
     this.anims.create({
       key: "left",
@@ -356,7 +348,6 @@ function create() {
     // Animasyon yoksa statik frame kullan
     player.setFrame(4);
   }
-  */
 
   cursors = this.input.keyboard.createCursorKeys();
 
@@ -425,22 +416,19 @@ function update() {
   
   if (leftPressed) {
     player.setVelocityX(-moveSpeed);
-    player.setTint(0x0000ff); // Sola giderken mavi
-    /* if (player.anims) {
+    if (player.anims) {
       player.anims.play("left", true);
-    } */
+    }
   } else if (rightPressed) {
     player.setVelocityX(moveSpeed);
-    player.setTint(0xff0000); // Sağa giderken kırmızı
-    /* if (player.anims) {
+    if (player.anims) {
       player.anims.play("right", true);
-    } */
+    }
   } else {
     player.setVelocityX(0);
-    player.setTint(0x00ff00); // Duruyorken yeşil
-    /* if (player.anims) {
+    if (player.anims) {
       player.anims.play("turn");
-    } */
+    }
   }
 
   // Geliştirilmiş zıplama mekaniği - body kullan
@@ -494,7 +482,9 @@ function collectStar(player, star) {
 function hitBomb(player, bomb) {
   this.physics.pause();
   player.setTint(0xff0000);
-  // player.anims.play("turn"); // Animasyon kullanmıyoruz
+  if (player.anims) {
+    player.anims.play("turn");
+  }
   gameOver = true;
 
   // Game over mesajı
