@@ -1,6 +1,6 @@
-// Get screen dimensions for responsive design
-const gameWidth = Math.min(window.innerWidth, 800);
-const gameHeight = Math.min(window.innerHeight, 600);
+// Get screen dimensions for responsive design (fill the entire viewport)
+const gameWidth = window.innerWidth;
+const gameHeight = window.innerHeight;
 
 var config = {
   type: Phaser.AUTO,
@@ -192,45 +192,48 @@ function create() {
 
   platforms = this.physics.add.staticGroup();
 
-  // Fixed ground platform - proper scaling and positioning
-  const groundScaleX = Math.ceil(gameWidth / 160);
+  // Scale the main ground to span the full game width without oversizing
   const groundY = gameHeight - 32; // Proper ground position
-  const groundPlatform = platforms.create(gameWidth/2, groundY, "ground");
-  groundPlatform.setScale(groundScaleX, 2).refreshBody(); // Better thickness
-  
+  const groundPlatform = platforms.create(gameWidth / 2, groundY, "ground");
+  // Match the width of the ground to the game width while keeping the original height
+  const groundScaleX = gameWidth / groundPlatform.width;
+  groundPlatform.setScale(groundScaleX, 1).refreshBody();
+
   // Mobile-friendly platform positioning with proper spacing
   const isMobile = gameWidth < 600;
-  const platformScale = isMobile ? 1.5 : 1.2;
+  // Keep additional platforms narrow so they don't block too much of the screen
+  const platformScaleX = isMobile ? 0.9 : 1;
+  const platformScaleY = 1; // normal height
   
   if (isMobile) {
     // Mobile layout: better spaced platforms to prevent overlap and improve gameplay
     const leftPlatform = platforms.create(gameWidth * 0.15, gameHeight * 0.8, "ground");
-    leftPlatform.setScale(platformScale, 1.5).refreshBody();
+    leftPlatform.setScale(platformScaleX, platformScaleY).refreshBody();
     
     const centerPlatform = platforms.create(gameWidth * 0.5, gameHeight * 0.6, "ground");
-    centerPlatform.setScale(platformScale, 1.5).refreshBody();
+    centerPlatform.setScale(platformScaleX, platformScaleY).refreshBody();
     
     const rightPlatform = platforms.create(gameWidth * 0.85, gameHeight * 0.7, "ground");
-    rightPlatform.setScale(platformScale, 1.5).refreshBody();
+    rightPlatform.setScale(platformScaleX, platformScaleY).refreshBody();
     
     const topLeftPlatform = platforms.create(gameWidth * 0.25, gameHeight * 0.4, "ground");
-    topLeftPlatform.setScale(platformScale * 0.7, 1.5).refreshBody();
+    topLeftPlatform.setScale(platformScaleX * 0.8, platformScaleY).refreshBody();
     
     const topRightPlatform = platforms.create(gameWidth * 0.75, gameHeight * 0.45, "ground");
-    topRightPlatform.setScale(platformScale * 0.7, 1.5).refreshBody();
+    topRightPlatform.setScale(platformScaleX * 0.8, platformScaleY).refreshBody();
   } else {
     // Desktop layout: properly positioned platforms
     const p1 = platforms.create(gameWidth * 0.85, gameHeight * 0.75, "ground");
-    p1.setScale(platformScale, 1.5).refreshBody();
+    p1.setScale(platformScaleX, platformScaleY).refreshBody();
     
     const p2 = platforms.create(gameWidth * 0.15, gameHeight * 0.5, "ground");
-    p2.setScale(platformScale, 1.5).refreshBody();
+    p2.setScale(platformScaleX, platformScaleY).refreshBody();
     
     const p3 = platforms.create(gameWidth * 0.9, gameHeight * 0.4, "ground");
-    p3.setScale(platformScale, 1.5).refreshBody();
+    p3.setScale(platformScaleX, platformScaleY).refreshBody();
     
     const p4 = platforms.create(gameWidth * 0.45, gameHeight * 0.65, "ground");
-    p4.setScale(platformScale, 1.5).refreshBody();
+    p4.setScale(platformScaleX, platformScaleY).refreshBody();
   }
 
   // Fixed player spawn position - ensure they spawn safely above ground
@@ -272,7 +275,8 @@ function create() {
   stars = this.physics.add.group({
     key: "star",
     repeat: starCount - 1,
-    setXY: { x: 60, y: 0, stepX: Math.floor((gameWidth - 120) / (starCount - 1)) },
+    // Start a bit lower so the stars don't cover the score text
+    setXY: { x: 60, y: 70, stepX: Math.floor((gameWidth - 120) / (starCount - 1)) },
   });
 
   stars.children.iterate(function (child) {
