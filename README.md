@@ -11,9 +11,15 @@ This game is a platformer that I developed following the "Making your first Phas
 
 ## Game Controls
 
+### Desktop Controls
 - **Left:** Left arrow key
 - **Right:** Right arrow key
-- **Jump:** Up arrow key
+- **Jump:** Up arrow key or Space bar
+
+### Mobile Controls
+- **Left/Right:** Touch buttons at the bottom of the screen
+- **Jump:** Jump button or swipe up gesture
+- **Full Screen:** Automatically requested on first touch
 
 ## Game Description
 
@@ -31,3 +37,9 @@ This game is developed using the Phaser game framework. The player must dodge bo
 - Player movements: Movement to the right, left, upwards.
 - Collect stars and calculate score.
 - Dodging bombs and game over.
+- **Mobile Support:** Fully responsive design with touch controls
+- **Multi-touch Support:** Can move and jump simultaneously
+- **Swipe Gestures:** Quick swipe up to jump
+- **Haptic Feedback:** Vibration on button press (if supported)
+- **Orientation Support:** Works in both portrait and landscape modes
+- **Performance Optimized:** Smooth 60 FPS on mobile devices

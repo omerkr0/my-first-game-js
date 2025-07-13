@@ -70,8 +70,8 @@
         pointer-events: none;
       }
       
-      /* Desktop'ta kontrolleri gizle */
-      @media (min-width: 1024px) and (pointer: fine) {
+      /* Desktop'ta kontrolleri gizle - sadece mouse kullanıcıları için */
+      @media (min-width: 1024px) and (pointer: fine) and (hover: hover) {
         .mobile-controls {
           display: none;
         }
@@ -80,6 +80,13 @@
           max-width: 1200px;
           max-height: 800px;
           margin: 0 auto;
+        }
+      }
+      
+      /* Dokunmatik ekranlı laptop'larda kontrolleri göster */
+      @media (min-width: 1024px) and (pointer: coarse) {
+        .mobile-controls {
+          display: flex !important;
         }
       }
       

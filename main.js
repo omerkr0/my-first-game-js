@@ -32,7 +32,9 @@ var config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: gameDimensions.width,
-    height: gameDimensions.height
+    height: gameDimensions.height,
+    expandParent: false,
+    autoRound: true
   },
   physics: {
     default: "arcade",
@@ -51,7 +53,15 @@ var config = {
   loader: {
     baseURL: window.location.origin + window.location.pathname.replace(/[^\/]*$/, ''),
     crossOrigin: 'anonymous'
-  }
+  },
+  // Mobil performans optimizasyonları
+  fps: {
+    target: 60,
+    forceSetTimeOut: false
+  },
+  antialias: false,
+  pixelArt: false,
+  roundPixels: true
 };
 
 var player;
@@ -71,6 +81,9 @@ var mobileControls = {
   up: false
 };
 
+// Touch event tracking
+var activeTouches = new Map();
+
 var lastJumpTime = 0;
 
 // Debug mode - set to false for production
@@ -78,20 +91,32 @@ var debugMode = false;
 
 var game = new Phaser.Game(config);
 
+// Prevent default touch behaviors
+function preventDefaultTouch(e) {
+  if (e.cancelable) {
+    e.preventDefault();
+  }
+  e.stopPropagation();
+}
+
 // Mobile control event listeners with improved responsiveness
 function setupMobileControls() {
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const jumpBtn = document.getElementById('jump-btn');
   
+  // Prevent context menu on long press
+  [leftBtn, rightBtn, jumpBtn].forEach(btn => {
+    btn.addEventListener('contextmenu', preventDefaultTouch);
+  });
+
   // Helper function for haptic feedback
   function vibrate() {
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
     }
   }
   
-  // Helper function to add visual feedback
   function addPressedClass(btn) {
     btn.classList.add('pressed');
   }
@@ -100,133 +125,152 @@ function setupMobileControls() {
     btn.classList.remove('pressed');
   }
   
-  if (leftBtn) {
-    // Touch events
-    leftBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      mobileControls.left = true;
-      addPressedClass(leftBtn);
-      vibrate();
-      if (debugMode) console.log('Left button pressed (touch)');
-    }, { passive: false });
-    
-    leftBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      mobileControls.left = false;
-      removePressedClass(leftBtn);
-      if (debugMode) console.log('Left button released (touch)');
-    }, { passive: false });
-    
-    leftBtn.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      mobileControls.left = false;
-      removePressedClass(leftBtn);
-    }, { passive: false });
-    
-    // Mouse events for desktop testing
-    leftBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      mobileControls.left = true;
-      addPressedClass(leftBtn);
-    });
-    leftBtn.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      mobileControls.left = false;
-      removePressedClass(leftBtn);
-    });
-    leftBtn.addEventListener('mouseleave', (e) => {
-      mobileControls.left = false;
-      removePressedClass(leftBtn);
-    });
-  }
+  // Left button with multi-touch support
+  // Touch events
+  leftBtn.addEventListener('touchstart', (e) => {
+    preventDefaultTouch(e);
+    for (let touch of e.changedTouches) {
+      activeTouches.set(touch.identifier, 'left');
+    }
+    mobileControls.left = true;
+    addPressedClass(leftBtn);
+    vibrate();
+    if (debugMode) console.log('Left button pressed (touch)');
+  }, { passive: false });
   
-  if (rightBtn) {
-    // Touch events
-    rightBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      mobileControls.right = true;
-      addPressedClass(rightBtn);
-      vibrate();
-      if (debugMode) console.log('Right button pressed (touch)');
-    }, { passive: false });
-    
-    rightBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      mobileControls.right = false;
-      removePressedClass(rightBtn);
-      if (debugMode) console.log('Right button released (touch)');
-    }, { passive: false });
-    
-    rightBtn.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      mobileControls.right = false;
-      removePressedClass(rightBtn);
-    }, { passive: false });
-    
-    // Mouse events for desktop testing
-    rightBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      mobileControls.right = true;
-      addPressedClass(rightBtn);
-    });
-    rightBtn.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      mobileControls.right = false;
-      removePressedClass(rightBtn);
-    });
-    rightBtn.addEventListener('mouseleave', (e) => {
-      mobileControls.right = false;
-      removePressedClass(rightBtn);
-    });
-  }
+  leftBtn.addEventListener('touchend', (e) => {
+    preventDefaultTouch(e);
+    for (let touch of e.changedTouches) {
+      activeTouches.delete(touch.identifier);
+    }
+    if (![...activeTouches.values()].includes('left')) {
+      mobileControls.left = false;
+      removePressedClass(leftBtn);
+    }
+    if (debugMode) console.log('Left button released (touch)');
+  }, { passive: false });
   
-  if (jumpBtn) {
-    // Touch events
-    jumpBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      mobileControls.up = true;
-      addPressedClass(jumpBtn);
-      vibrate();
-      if (debugMode) console.log('Jump button pressed (touch)');
-    }, { passive: false });
-    
-    jumpBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+  leftBtn.addEventListener('touchcancel', (e) => {
+    preventDefaultTouch(e);
+    mobileControls.left = false;
+    removePressedClass(leftBtn);
+  }, { passive: false });
+  
+  // Mouse events for testing on desktop
+  leftBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    mobileControls.left = true;
+    addPressedClass(leftBtn);
+  });
+  
+  leftBtn.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    mobileControls.left = false;
+    removePressedClass(leftBtn);
+  });
+  
+  leftBtn.addEventListener('mouseleave', () => {
+    mobileControls.left = false;
+    removePressedClass(leftBtn);
+  });
+  
+  // Right button with multi-touch support
+  // Touch events
+  rightBtn.addEventListener('touchstart', (e) => {
+    preventDefaultTouch(e);
+    for (let touch of e.changedTouches) {
+      activeTouches.set(touch.identifier, 'right');
+    }
+    mobileControls.right = true;
+    addPressedClass(rightBtn);
+    vibrate();
+    if (debugMode) console.log('Right button pressed (touch)');
+  }, { passive: false });
+  
+  rightBtn.addEventListener('touchend', (e) => {
+    preventDefaultTouch(e);
+    for (let touch of e.changedTouches) {
+      activeTouches.delete(touch.identifier);
+    }
+    if (![...activeTouches.values()].includes('right')) {
+      mobileControls.right = false;
+      removePressedClass(rightBtn);
+    }
+    if (debugMode) console.log('Right button released (touch)');
+  }, { passive: false });
+  
+  rightBtn.addEventListener('touchcancel', (e) => {
+    preventDefaultTouch(e);
+    mobileControls.right = false;
+    removePressedClass(rightBtn);
+  }, { passive: false });
+  
+  // Mouse events for testing on desktop
+  rightBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    mobileControls.right = true;
+    addPressedClass(rightBtn);
+  });
+  
+  rightBtn.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    mobileControls.right = false;
+    removePressedClass(rightBtn);
+  });
+  
+  rightBtn.addEventListener('mouseleave', () => {
+    mobileControls.right = false;
+    removePressedClass(rightBtn);
+  });
+  
+  // Jump button with multi-touch support
+  // Touch events
+  jumpBtn.addEventListener('touchstart', (e) => {
+    preventDefaultTouch(e);
+    for (let touch of e.changedTouches) {
+      activeTouches.set(touch.identifier, 'jump');
+    }
+    mobileControls.up = true;
+    addPressedClass(jumpBtn);
+    vibrate();
+    if (debugMode) console.log('Jump button pressed (touch)');
+  }, { passive: false });
+  
+  jumpBtn.addEventListener('touchend', (e) => {
+    preventDefaultTouch(e);
+    for (let touch of e.changedTouches) {
+      activeTouches.delete(touch.identifier);
+    }
+    if (![...activeTouches.values()].includes('jump')) {
       mobileControls.up = false;
       removePressedClass(jumpBtn);
-      if (debugMode) console.log('Jump button released (touch)');
-    }, { passive: false });
-    
-    jumpBtn.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      mobileControls.up = false;
-      removePressedClass(jumpBtn);
-    }, { passive: false });
-    
-    // Mouse events for desktop testing
-    jumpBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      mobileControls.up = true;
-      addPressedClass(jumpBtn);
-      if (debugMode) console.log('Jump button pressed (mouse)');
-    });
-    jumpBtn.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      mobileControls.up = false;
-      removePressedClass(jumpBtn);
-      if (debugMode) console.log('Jump button released (mouse)');
-    });
-    jumpBtn.addEventListener('mouseleave', (e) => {
-      mobileControls.up = false;
-      removePressedClass(jumpBtn);
-    });
-  }
+    }
+    if (debugMode) console.log('Jump button released (touch)');
+  }, { passive: false });
+  
+  jumpBtn.addEventListener('touchcancel', (e) => {
+    preventDefaultTouch(e);
+    mobileControls.up = false;
+    removePressedClass(jumpBtn);
+  }, { passive: false });
+  
+  // Mouse events for testing on desktop
+  jumpBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    mobileControls.up = true;
+    addPressedClass(jumpBtn);
+  });
+  
+  jumpBtn.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    mobileControls.up = false;
+    removePressedClass(jumpBtn);
+  });
+  
+  jumpBtn.addEventListener('mouseleave', () => {
+    mobileControls.up = false;
+    removePressedClass(jumpBtn);
+  });
   
   // Debug: Log mobile controls state periodically
   setInterval(() => {
@@ -238,6 +282,22 @@ function setupMobileControls() {
 
 // Setup mobile controls when DOM is ready
 document.addEventListener('DOMContentLoaded', setupMobileControls);
+
+// Handle orientation changes on mobile
+window.addEventListener('orientationchange', function() {
+  setTimeout(() => {
+    if (game && game.scale) {
+      game.scale.refresh();
+    }
+  }, 100);
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+  if (game && game.scale) {
+    game.scale.refresh();
+  }
+});
 
 function preload() {
   // Loading göstergesini gizle
@@ -663,3 +723,85 @@ document.addEventListener('touchmove', function(e) {
 document.body.addEventListener('touchmove', function(e) {
   e.preventDefault();
 }, { passive: false });
+
+// Prevent double tap zoom
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) {
+    e.preventDefault();
+  }
+  lastTouchEnd = now;
+}, false);
+
+// Swipe controls for mobile
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+document.addEventListener('touchstart', function(e) {
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', function(e) {
+  if (e.changedTouches.length === 1) {
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const touchEndTime = Date.now();
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    const deltaTime = touchEndTime - touchStartTime;
+    
+    // Quick swipe up for jump
+    if (deltaTime < 300 && Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      if (deltaY < 0) {
+        // Swipe up - trigger jump
+        mobileControls.up = true;
+        setTimeout(() => {
+          mobileControls.up = false;
+        }, 100);
+      }
+    }
+  }
+}, { passive: true });
+
+// Show/hide mobile controls based on input type
+function updateControlsVisibility() {
+  const mobileControlsEl = document.querySelector('.mobile-controls');
+  if (!mobileControlsEl) return;
+  
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (hasTouch || isMobileDevice) {
+    mobileControlsEl.style.display = 'flex';
+  }
+}
+
+// Check controls visibility on load and orientation change
+window.addEventListener('load', updateControlsVisibility);
+window.addEventListener('orientationchange', updateControlsVisibility);
+
+// Fullscreen API for mobile
+function requestFullscreen() {
+  const elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullscreen) { // Safari
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) { // IE11
+    elem.msRequestFullscreen();
+  }
+}
+
+// Request fullscreen on first touch for better mobile experience
+document.addEventListener('touchstart', function() {
+  if (document.fullscreenElement === null) {
+    requestFullscreen();
+  }
+}, { once: true });
