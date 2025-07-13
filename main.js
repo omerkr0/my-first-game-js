@@ -21,38 +21,7 @@ function getGameDimensions() {
   };
 }
 
-const gameDimensions = getGameDimensions();
-
-var config = {
-  type: Phaser.AUTO,
-  width: gameDimensions.width,
-  height: gameDimensions.height,
-  parent: 'game-container',
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: gameDimensions.width,
-    height: gameDimensions.height
-  },
-  physics: {
-    default: "arcade",
-    arcade: {
-      gravity: { y: 280 },
-      debug: false,
-    },
-  },
-  scene: {
-    preload: preload,
-    create: create,
-    update: update,
-  },
-  backgroundColor: '#87CEEB', // Gökyüzü rengi
-  // Base path ekle
-  loader: {
-    baseURL: window.location.origin + window.location.pathname.replace(/[^\/]*$/, ''),
-    crossOrigin: 'anonymous'
-  }
-};
+var config; // Declare config globally but initialize it later
 
 var player;
 var stars;
@@ -74,7 +43,7 @@ var mobileControls = {
 var lastJumpTime = 0;
 
 // Debug mode - set to false for production
-var debugMode = true; // Temporarily enabled for testing mobile controls
+var debugMode = false;
 
 var game; // Declare game variable but don't initialize yet
 
@@ -83,11 +52,6 @@ function setupMobileControls() {
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const jumpBtn = document.getElementById('jump-btn');
-  
-  console.log('Setting up mobile controls...');
-  console.log('Left button:', leftBtn);
-  console.log('Right button:', rightBtn);
-  console.log('Jump button:', jumpBtn);
   
   // Helper function for haptic feedback
   function vibrate() {
@@ -243,13 +207,45 @@ function setupMobileControls() {
 
 // Setup game and mobile controls when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize game dimensions and config after DOM is ready
+  const gameDimensions = getGameDimensions();
+  
+  config = {
+    type: Phaser.AUTO,
+    width: gameDimensions.width,
+    height: gameDimensions.height,
+    parent: 'game-container',
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: gameDimensions.width,
+      height: gameDimensions.height
+    },
+    physics: {
+      default: "arcade",
+      arcade: {
+        gravity: { y: 280 },
+        debug: false,
+      },
+    },
+    scene: {
+      preload: preload,
+      create: create,
+      update: update,
+    },
+    backgroundColor: '#87CEEB', // Gökyüzü rengi
+    // Base path ekle
+    loader: {
+      baseURL: window.location.origin + window.location.pathname.replace(/[^\/]*$/, ''),
+      crossOrigin: 'anonymous'
+    }
+  };
+  
   // Create the Phaser game instance
   game = new Phaser.Game(config);
   
   // Setup mobile controls
   setupMobileControls();
-  
-  console.log('Game and mobile controls initialized');
 });
 
 function preload() {
