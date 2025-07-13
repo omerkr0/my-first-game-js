@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Touch Test - Phaser</title>
+    <style>
+        body { margin: 0; padding: 0; background: #222; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
+    </style>
+</head>
+<body>
+    <div id="info">Touch the screen to test</div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script>
+        class TestScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'TestScene' });
+                this.touches = [];
+            }
+            
+            create() {
+                const { width, height } = this.cameras.main;
+                
+                // Arka plan
+                this.add.rectangle(width/2, height/2, width, height, 0x2c3e50);
+                
+                // Bilgi metni
+                this.infoText = this.add.text(10, 10, '', {
+                    fontSize: '16px',
+                    color: '#ffffff'
+                });
+                
+                // Test butonu
+                const button = this.add.circle(width/2, height/2, 80, 0x3498db);
+                button.setStrokeStyle(4, 0xffffff);
+                
+                const buttonText = this.add.text(width/2, height/2, 'TAP ME', {
+                    fontSize: '24px',
+                    color: '#ffffff',
+                    fontStyle: 'bold'
+                });
+                buttonText.setOrigin(0.5);
+                
+                // Buton interaktif
+                button.setInteractive();
+                
+                button.on('pointerdown', (pointer) => {
+                    console.log('Button pressed!', pointer);
+                    button.setScale(0.9);
+                    button.setFillStyle(0x2980b9);
+                    this.updateInfo('Button pressed! Pointer ID: ' + pointer.id);
+                });
+                
+                button.on('pointerup', () => {
+                    console.log('Button released!');
+                    button.setScale(1);
+                    button.setFillStyle(0x3498db);
+                    this.updateInfo('Button released!');
+                });
+                
+                // Genel touch eventleri
+                this.input.on('pointerdown', (pointer) => {
+                    const touch = this.add.circle(pointer.x, pointer.y, 30, 0xe74c3c, 0.5);
+                    touch.setStrokeStyle(2, 0xffffff);
+                    
+                    this.touches.push({
+                        id: pointer.id,
+                        circle: touch,
+                        text: this.add.text(pointer.x, pointer.y - 50, `ID: ${pointer.id}`, {
+                            fontSize: '14px',
+                            color: '#ffffff'
+                        }).setOrigin(0.5)
+                    });
+                    
+                    this.updateInfo(`Touch down at ${Math.round(pointer.x)}, ${Math.round(pointer.y)}`);
+                });
+                
+                this.input.on('pointermove', (pointer) => {
+                    const touch = this.touches.find(t => t.id === pointer.id);
+                    if (touch && pointer.isDown) {
+                        touch.circle.x = pointer.x;
+                        touch.circle.y = pointer.y;
+                        touch.text.x = pointer.x;
+                        touch.text.y = pointer.y - 50;
+                    }
+                });
+                
+                this.input.on('pointerup', (pointer) => {
+                    const touchIndex = this.touches.findIndex(t => t.id === pointer.id);
+                    if (touchIndex !== -1) {
+                        const touch = this.touches[touchIndex];
+                        touch.circle.destroy();
+                        touch.text.destroy();
+                        this.touches.splice(touchIndex, 1);
+                    }
+                });
+                
+                // Input plugin bilgileri
+                this.time.addEvent({
+                    delay: 100,
+                    callback: () => {
+                        const info = [
+                            `Active Pointers: ${this.input.manager.pointersTotal}`,
+                            `Touch: ${this.input.manager.touch.enabled}`,
+                            `Mouse: ${this.input.manager.mouse.enabled}`,
+                            `Pointers: ${this.input.manager.pointers.length}`
+                        ];
+                        this.infoText.setText(info);
+                    },
+                    loop: true
+                });
+            }
+            
+            updateInfo(msg) {
+                console.log(msg);
+                
+                // Geçici mesaj göster
+                const tempText = this.add.text(
+                    this.cameras.main.width / 2,
+                    this.cameras.main.height - 50,
+                    msg,
+                    {
+                        fontSize: '20px',
+                        color: '#ffffff',
+                        backgroundColor: '#000000',
+                        padding: { x: 10, y: 5 }
+                    }
+                );
+                tempText.setOrigin(0.5);
+                
+                this.tweens.add({
+                    targets: tempText,
+                    alpha: 0,
+                    duration: 2000,
+                    onComplete: () => tempText.destroy()
+                });
+            }
+        }
+        
+        const config = {
+            type: Phaser.AUTO,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            parent: document.body,
+            scene: TestScene,
+            input: {
+                activePointers: 4
+            }
+        };
+        
+        const game = new Phaser.Game(config);
+        
+        // Device info
+        console.log('Touch Test Loaded', {
+            touch: 'ontouchstart' in window,
+            maxTouchPoints: navigator.maxTouchPoints,
+            userAgent: navigator.userAgent
+        });
+    </script>
+</body>
+</html>
