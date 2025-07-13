@@ -74,15 +74,20 @@ var mobileControls = {
 var lastJumpTime = 0;
 
 // Debug mode - set to false for production
-var debugMode = false;
+var debugMode = true; // Temporarily enabled for testing mobile controls
 
-var game = new Phaser.Game(config);
+var game; // Declare game variable but don't initialize yet
 
 // Mobile control event listeners with improved responsiveness
 function setupMobileControls() {
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const jumpBtn = document.getElementById('jump-btn');
+  
+  console.log('Setting up mobile controls...');
+  console.log('Left button:', leftBtn);
+  console.log('Right button:', rightBtn);
+  console.log('Jump button:', jumpBtn);
   
   // Helper function for haptic feedback
   function vibrate() {
@@ -236,8 +241,16 @@ function setupMobileControls() {
   }, 1000);
 }
 
-// Setup mobile controls when DOM is ready
-document.addEventListener('DOMContentLoaded', setupMobileControls);
+// Setup game and mobile controls when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Create the Phaser game instance
+  game = new Phaser.Game(config);
+  
+  // Setup mobile controls
+  setupMobileControls();
+  
+  console.log('Game and mobile controls initialized');
+});
 
 function preload() {
   // Loading göstergesini gizle
