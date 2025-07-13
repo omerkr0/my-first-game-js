@@ -101,13 +101,27 @@ function preventDefaultTouch(e) {
 
 // Mobile control event listeners with improved responsiveness
 function setupMobileControls() {
+  console.log('setupMobileControls çağrıldı');
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const jumpBtn = document.getElementById('jump-btn');
   
+  console.log('Butonlar:', { leftBtn, rightBtn, jumpBtn });
+  
+  // Butonlar bulunamadıysa hata ver ve çık
+  if (!leftBtn || !rightBtn || !jumpBtn) {
+    console.error('HATA: Mobil kontrol butonları bulunamadı!');
+    console.error('leftBtn:', leftBtn);
+    console.error('rightBtn:', rightBtn);
+    console.error('jumpBtn:', jumpBtn);
+    return;
+  }
+  
   // Prevent context menu on long press
   [leftBtn, rightBtn, jumpBtn].forEach(btn => {
-    btn.addEventListener('contextmenu', preventDefaultTouch);
+    if (btn) {
+      btn.addEventListener('contextmenu', preventDefaultTouch);
+    }
   });
 
   // Helper function for haptic feedback
@@ -126,28 +140,22 @@ function setupMobileControls() {
   }
   
   // Left button with multi-touch support
-  // Touch events
+  // Touch events - basitleştirilmiş
   leftBtn.addEventListener('touchstart', (e) => {
-    preventDefaultTouch(e);
-    for (let touch of e.changedTouches) {
-      activeTouches.set(touch.identifier, 'left');
-    }
+    e.preventDefault();
+    e.stopPropagation();
     mobileControls.left = true;
-    addPressedClass(leftBtn);
+    leftBtn.classList.add('pressed');
     vibrate();
-    if (debugMode) console.log('Left button pressed (touch)');
+    console.log('Sol buton basıldı - touchstart', mobileControls);
   }, { passive: false });
   
   leftBtn.addEventListener('touchend', (e) => {
-    preventDefaultTouch(e);
-    for (let touch of e.changedTouches) {
-      activeTouches.delete(touch.identifier);
-    }
-    if (![...activeTouches.values()].includes('left')) {
-      mobileControls.left = false;
-      removePressedClass(leftBtn);
-    }
-    if (debugMode) console.log('Left button released (touch)');
+    e.preventDefault();
+    e.stopPropagation();
+    mobileControls.left = false;
+    leftBtn.classList.remove('pressed');
+    console.log('Sol buton bırakıldı - touchend', mobileControls);
   }, { passive: false });
   
   leftBtn.addEventListener('touchcancel', (e) => {
@@ -281,7 +289,25 @@ function setupMobileControls() {
 }
 
 // Setup mobile controls when DOM is ready
-document.addEventListener('DOMContentLoaded', setupMobileControls);
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM yüklendi, mobil kontroller kuruluyor...');
+  setupMobileControls();
+  
+  // Kontrollerin görünür olduğundan emin ol
+  const mobileControlsEl = document.querySelector('.mobile-controls');
+  if (mobileControlsEl) {
+    console.log('Mobil kontroller bulundu, görünürlük:', window.getComputedStyle(mobileControlsEl).display);
+    // Force display on mobile or touch devices
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (hasTouch) {
+      mobileControlsEl.style.display = 'flex';
+      mobileControlsEl.style.visibility = 'visible';
+      console.log('Touch cihaz algılandı, kontroller gösteriliyor');
+    }
+  } else {
+    console.error('Mobil kontrol elementi bulunamadı!');
+  }
+});
 
 // Handle orientation changes on mobile
 window.addEventListener('orientationchange', function() {
@@ -548,9 +574,26 @@ function update() {
   }
   
   // Check both keyboard and mobile controls
-  const leftPressed = (cursors.left.isDown || mobileControls.left);
-  const rightPressed = (cursors.right.isDown || mobileControls.right);
-  const upPressed = (cursors.up.isDown || spaceKey.isDown || mobileControls.up);
+  const leftPressed = (cursors.left.isDown || mobileControls.left || (window.mobileControls && window.mobileControls.left));
+  const rightPressed = (cursors.right.isDown || mobileControls.right || (window.mobileControls && window.mobileControls.right));
+  const upPressed = (cursors.up.isDown || spaceKey.isDown || mobileControls.up || (window.mobileControls && window.mobileControls.up));
+  
+  // Debug kontroller
+  if (leftPressed || rightPressed || upPressed) {
+    console.log('Kontrol algılandı:', {
+      left: leftPressed,
+      right: rightPressed, 
+      up: upPressed,
+      mobileControls,
+      windowMobileControls: window.mobileControls,
+      keyboard: {
+        left: cursors.left.isDown,
+        right: cursors.right.isDown,
+        up: cursors.up.isDown,
+        space: spaceKey.isDown
+      }
+    });
+  }
   
   // Responsive hareket hızları
   const gameWidth = this.cameras.main.width;

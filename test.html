@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontrol Testi</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #2c3e50;
+            color: white;
+        }
+        .info {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+        }
+        .btn {
+            width: 60px;
+            height: 60px;
+            background: white;
+            color: #2c3e50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: none;
+        }
+        .btn:active {
+            background: #3498db;
+            color: white;
+            transform: scale(0.9);
+        }
+        #log {
+            background: black;
+            padding: 10px;
+            border-radius: 5px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h2>Kontrol Testi</h2>
+        <p>User Agent: <span id="ua"></span></p>
+        <p>Touch Desteği: <span id="touch"></span></p>
+        <p>Ekran: <span id="screen"></span></p>
+    </div>
+    
+    <div id="log"></div>
+    
+    <div class="controls">
+        <div style="display: flex; gap: 10px;">
+            <div class="btn" id="left">←</div>
+            <div class="btn" id="right">→</div>
+        </div>
+        <div class="btn" id="jump">↑</div>
+    </div>
+    
+    <script>
+        // Cihaz bilgileri
+        document.getElementById('ua').textContent = navigator.userAgent;
+        document.getElementById('touch').textContent = 'ontouchstart' in window ? 'VAR' : 'YOK';
+        document.getElementById('screen').textContent = window.innerWidth + 'x' + window.innerHeight;
+        
+        const log = document.getElementById('log');
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML = `<div>${time}: ${msg}</div>` + log.innerHTML;
+        }
+        
+        // Kontrol test
+        ['left', 'right', 'jump'].forEach(id => {
+            const btn = document.getElementById(id);
+            
+            // Touch events
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                btn.style.background = '#3498db';
+                btn.style.color = 'white';
+                addLog(`${id} - touchstart`);
+            }, { passive: false });
+            
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                btn.style.background = 'white';
+                btn.style.color = '#2c3e50';
+                addLog(`${id} - touchend`);
+            }, { passive: false });
+            
+            // Mouse events
+            btn.addEventListener('mousedown', () => {
+                btn.style.background = '#3498db';
+                btn.style.color = 'white';
+                addLog(`${id} - mousedown`);
+            });
+            
+            btn.addEventListener('mouseup', () => {
+                btn.style.background = 'white';
+                btn.style.color = '#2c3e50';
+                addLog(`${id} - mouseup`);
+            });
+            
+            // Click event
+            btn.addEventListener('click', () => {
+                addLog(`${id} - click`);
+            });
+        });
+        
+        addLog('Test sayfası yüklendi');
+    </script>
+</body>
+</html>
